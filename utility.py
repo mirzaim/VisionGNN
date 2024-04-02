@@ -12,7 +12,7 @@ class TwoLayerNN(nn.Module):
         self.layer = nn.Sequential(
             nn.Linear(in_features, hidden_features),
             nn.BatchNorm1d(hidden_features),
-            nn.ReLU(),
+            nn.GELU(),
             nn.Linear(hidden_features, out_features),
         )
 
@@ -33,31 +33,3 @@ class SimplePatchifier(nn.Module):
             .view(B, -1, C, self.patch_size, self.patch_size)
         return x
 
-
-class OverlappingPatchifier(nn.Module):
-    """ Image to Visual Word Embedding
-    Overlap: https://arxiv.org/pdf/2106.13797.pdf
-    """
-
-    def __init__(self, img_size=224, in_dim=3, out_dim=768):
-        super().__init__()
-        self.convs = nn.Sequential(
-            nn.Conv2d(in_dim, out_dim//8, 3, stride=2, padding=1),
-            nn.BatchNorm2d(out_dim//8),
-            nn.ReLU(),
-            nn.Conv2d(out_dim//8, out_dim//4, 3, stride=2, padding=1),
-            nn.BatchNorm2d(out_dim//4),
-            nn.ReLU(),
-            nn.Conv2d(out_dim//4, out_dim//2, 3, stride=2, padding=1),
-            nn.BatchNorm2d(out_dim//2),
-            nn.ReLU(),
-            nn.Conv2d(out_dim//2, out_dim, 3, stride=2, padding=1),
-            nn.BatchNorm2d(out_dim),
-            nn.ReLU(),
-            nn.Conv2d(out_dim, out_dim, 3, stride=1, padding=1),
-            nn.BatchNorm2d(out_dim),
-        )
-
-    def forward(self, x):
-        x = self.convs(x)
-        return x
