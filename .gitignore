@@ -175,3 +175,6 @@ cython_debug/
 
 # Datasets folder
 data/
+
+# logs
+train_log/

@@ -86,3 +86,24 @@ class VGNN(nn.Module):
         x = self.blocks(x)
 
         return x
+
+
+class Classifier(nn.Module):
+    def __init__(self, in_features=3*16*16, out_feature=320,
+                 num_patches=196, num_ViGBlocks=16, hidden_layer=1024, n_classes=10):
+        super().__init__()
+        self.backbone = VGNN(in_features, out_feature,
+                             num_patches, num_ViGBlocks)
+
+        self.predictor = nn.Sequential(
+            nn.Linear(out_feature*num_patches, 1024),
+            nn.BatchNorm1d(hidden_layer),
+            nn.GELU(),
+            nn.Linear(hidden_layer, n_classes)
+        )
+
+    def forward(self, x):
+        features = self.backbone(x)
+        B, N, C = features.shape
+        x = self.predictor(features.view(B, -1))
+        return features, x
