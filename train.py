@@ -18,6 +18,7 @@ from dataset import ImageNetteDataset
 def load_dataset(path, batch_size):
     pretrained_means = [0.485, 0.456, 0.406]
     pretrained_stds = [0.229, 0.224, 0.225]
+    # is the order of tranfoms important? Is this the best order?
     transform_train = transforms.Compose([
         transforms.Resize((224, 224)),
         transforms.RandAugment(),
@@ -103,21 +104,28 @@ def validation_step(model, dataloader, device):
 
 
 def train(conf, device):
-    save_dir = Path(conf['TRAIN']['SAVE_DIR']) / datetime.now().strftime('%Y%m%d_%H%M')
+    save_dir = Path(conf['TRAIN']['SAVE_DIR']) / \
+        datetime.now().strftime('%Y%m%d_%H%M')
     save_dir.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.INFO, handlers=[
         logging.FileHandler(save_dir / 'train.log'),
         logging.StreamHandler()
     ])
 
-    model = Classifier(n_classes=conf['DATASET'].getint('NUM_CLASSES'))
+    model = Classifier(n_classes=conf['DATASET'].getint('NUM_CLASSES'),
+                       num_ViGBlocks=conf['MODEL'].getint('DEPTH'),
+                       out_feature=conf['MODEL'].getint('DIMENSION'),
+                       num_edges=conf['MODEL'].getint('NUM_EDGES'),
+                       head_num=conf['MODEL'].getint('HEAD_NUM'))
     model.to(device)
     logging.info('Model loaded')
+    logging.info({section: dict(conf[section]) for section in conf.sections()})
+
     train_dataloader, val_dataloader = load_dataset(
         conf['DATASET']['PATH'], conf['TRAIN'].getint('BATCH_SIZE'))
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=1e-5)
+    optimizer = optim.Adam(model.parameters(), lr=conf['TRAIN'].getfloat('LR'))
 
     loss_hisroty, train_acc_hist, val_acc_hist = [], [], []
     max_val_acc = 0
