@@ -26,7 +26,7 @@ from PIL import Image
 from dataset import ImageNetteDataset
 from tqdm import tqdm
 import time
-from model import VGNN
+from model import VGNN, Classifier
 from original_model import DeepGCN
 
 # %%
@@ -48,31 +48,39 @@ NUM_CLASSES = 10
 
 
 # %%
-class Classifier(nn.Module):
-    def __init__(self, n_classes=10):
-        super().__init__()
-        self.backbone = VGNN()
-
-        self.predictor = nn.Sequential(
-            nn.Linear(320*196, 1024),
-            nn.BatchNorm1d(1024),
-            nn.GELU(),
-            nn.Linear(1024, n_classes)
-        )
-        self.fc1 = nn.Linear(320*196, 256)
-        self.fc2 = nn.Linear(256, n_classes)
-        
-    def forward(self, x):
-        features = self.backbone(x)
-        B, N, C = features.shape
-        x = self.predictor(features.view(B, -1))
-        return features, x
-
-# %%
-model = Classifier(n_classes=NUM_CLASSES)
+model = Classifier(n_classes=NUM_CLASSES, head_num=1)
 model(torch.randn(32, 3, 224, 224))[-1].shape
 model.to(device)
 print('Model loaded')
+
+# %%
+# head_num = 4
+# x = torch.rand(32, 196, 320, 2).to(device)
+# B, N, C, INP = x.shape
+
+# # multi-head implementation 1
+# heads = [nn.Linear(C * INP//head_num, C//head_num)
+#          for _ in range(head_num)]
+# print(f'Number of parameters: {len(heads) * sum(p.numel() for p in heads[0].parameters())}')
+# x = x.view(B*N, head_num, INP, -1)
+# for i in range(head_num):
+#     x[:, i, 0] = heads[i](x[:, i].view(B*N, -1))
+# x = x[:, :, 0].reshape(B, N, -1)
+# x.shape
+
+# %%
+# head_num = 4
+# x = torch.rand(32, 196, 320, 2).to(device)
+# B, N, C, INP = x.shape
+
+# # multi-head implementation 2
+# x = x.view(B*N, -1, 1)
+# heads = nn.Conv1d(C * INP, C, 1, 1, groups=head_num)
+# print(f'Number of parameters: {sum(p.numel() for p in heads.parameters())}')
+# x = heads(x).reshape(B, N, -1)
+# x.shape
+
+# %%
 
 # %%
 # opt = {
